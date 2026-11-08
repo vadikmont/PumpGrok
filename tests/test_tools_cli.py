@@ -107,6 +107,7 @@ class TestPaperRegistryPath:
         assert payload["ok"] is False
         assert payload["code"] == "permission_denied"
         assert "Traceback" not in captured.err
+        assert not (tmp_path / "var" / "ledger.sqlite").exists()
 
     @pytest.mark.parametrize("side", ["buy", "sell"])
     def test_paper_writer_seat_refused_unavailable(
@@ -128,6 +129,7 @@ class TestPaperRegistryPath:
         assert payload["code"] == "unavailable"
         assert "verified curve price source" in payload["message"]
         assert _ledger_kinds(tmp_path) == []
+        assert not (tmp_path / "var" / "ledger.sqlite").exists()
 
     def test_paper_rejections_write_no_order_placed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

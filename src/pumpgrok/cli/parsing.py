@@ -152,6 +152,24 @@ def _add_state(verbs: _VerbsAction, mode_option: _Parser) -> None:
     state_resume.add_argument("--by", required=True, help="human resuming the seat")
 
 
+def _add_terminal(verbs: _VerbsAction, mode_option: _Parser) -> None:
+    terminal = verbs.add_parser(
+        "terminal",
+        parents=[mode_option],
+        help="read-only paper ledger terminal",
+    )
+    terminal_cmd = terminal.add_subparsers(dest="cmd", required=True, metavar="TERMINAL")
+    terminal_cmd.add_parser("status", help="print the ledger snapshot as JSON")
+    serve = terminal_cmd.add_parser("serve", help="serve the snapshot on 127.0.0.1")
+    serve.add_argument("--host", default="127.0.0.1", help="must be 127.0.0.1")
+    serve.add_argument(
+        "--port",
+        default=8765,
+        type=int,
+        help="loopback port; 0 picks a free port",
+    )
+
+
 def _add_tail(verbs: _VerbsAction, mode_option: _Parser) -> None:
     killswitch = verbs.add_parser("killswitch", parents=[mode_option], help="killswitch verbs")
     killswitch_cmd = killswitch.add_subparsers(dest="cmd", required=True, metavar="KILLSWITCH")
@@ -208,5 +226,6 @@ def build_parser() -> argparse.ArgumentParser:
     _add_risk_chief_rug(verbs, mode_option)
     _add_journal_ticket(verbs, mode_option)
     _add_state(verbs, mode_option)
+    _add_terminal(verbs, mode_option)
     _add_tail(verbs, mode_option)
     return parser

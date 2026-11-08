@@ -1,0 +1,47 @@
+{
+  "task_id": "paper-terminal",
+  "bot": "bot-09-journal",
+  "branch": "cursor/paper-terminal-ddf4",
+  "purpose": "Read-only paper terminal over the canonical ledger, and stop refused paper buy/sell, scout pipeline, and tools --help from stamping code-default equity onto var/ledger.sqlite. approved_by is absent: no second seat reviewed this work.",
+  "commands": [
+    {
+      "cmd": "uv run ruff check .",
+      "exit_code": 0
+    },
+    {
+      "cmd": "uv run ruff format --check .",
+      "exit_code": 0
+    },
+    {
+      "cmd": "uv run mypy src/",
+      "exit_code": 0
+    },
+    {
+      "cmd": "./scripts/check.sh",
+      "exit_code": 0
+    },
+    {
+      "cmd": "uv run pytest -q -m 'not slow' --cov=pumpgrok",
+      "exit_code": 0
+    },
+    {
+      "cmd": "python3 ci/gates/check_ownership.py --validate-manifest",
+      "exit_code": 0
+    }
+  ],
+  "claims": [
+    "ruff check and format exited 0",
+    "mypy src/ exited 0",
+    "scripts/check.sh exited 0",
+    "the non-slow pytest suite exited 0 with coverage 91.62 percent",
+    "pumpgrok terminal status on an empty directory reports an unavailable ledger and does not create var/ledger.sqlite"
+  ],
+  "unverified": [
+    "No second seat approved this receipt",
+    "G-1 cannot attribute cursor/paper-terminal-ddf4 to one seat, and the diff crosses bot-09-journal, bot-02-risk, and bot-00-chief",
+    "The terminal was not started on the parent computer",
+    "Trading Floor membership and role acknowledgements were not verified",
+    "A verified curve price source was not probed",
+    "ticket, state, and killswitch verbs were not changed and can still write code-default equity"
+  ]
+}
