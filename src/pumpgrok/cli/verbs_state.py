@@ -29,7 +29,7 @@ from pumpgrok.cli.errors import (
     _tool_error,
 )
 from pumpgrok.cli.promotion import make_promotion_check
-from pumpgrok.cli.validators import _human_by, _mint_approval_id, _utc_now, size_sol_to_lamports
+from pumpgrok.cli.validators import _human_by, _mint_approval_id, _utc_now
 from pumpgrok.cli.wiring import (
     _call_use,
     _run_wired,
@@ -179,22 +179,27 @@ def _paper(args: argparse.Namespace, settings: Settings) -> int:
 
     The forbidden-owner guard and the registry grant check (``find``) run before
     the refusal, so forbidden and operator seats keep their existing codes. Only a
-    seat allowed to trade reaches the refusal. No tool is invoked and nothing is
-    written: no curve price source is bound on the CLI and the RPC curve layout is
-    ASSUMED.
+    seat allowed to trade reaches the refusal. No tool is invoked. The grant check
+    uses a disposable ledger so the canonical paper ledger is neither created nor
+    stamped with code-default equity. No curve price source is bound on the CLI
+    and the RPC curve layout is ASSUMED.
     """
     verb = f"paper {args.cmd}"
     refused = _refuse_forbidden_seat(args.seat, verb)
     if refused is not None:
         return refused
-    if size_sol_to_lamports(args.size_sol) > settings.risk.paper_equity_lamports:
-        _say(sys.stderr, "usage error: --size-sol exceeds paper equity")
-        return EXIT_CONFIG
 
     async def use(_tools: list[Tool]) -> int:
         return _tool_error(verb, "unavailable", _TRADE_UNAVAILABLE)
 
-    return _run_wired(verb, args.seat, settings, ("exec.simulate", "exec.place"), use)
+    return _run_wired(
+        verb,
+        args.seat,
+        settings,
+        ("exec.simulate", "exec.place"),
+        use,
+        isolate=True,
+    )
 
 
 def _set_autonomy(policy: str, by: str, settings: Settings) -> int:

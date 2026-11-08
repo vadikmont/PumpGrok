@@ -33,3 +33,14 @@ Copy the example environment file to `.env` before the first run and fill in the
 - Normative setup: `SETUP.md`
 - Desk constitution: `rules/pumpgrok-team.mdc`, skill `desk-operating-model`
 - Boot order: skills `pumpgrok-setup`, `tool-connections`, `desk-risk-limits`
+- Read-only ledger page: `docs/runbooks/paper-terminal.md`
+
+## Paper-only boundary
+
+`SETUP.md` sections 9 and 12 still mention a throwaway wallet and the words "SETUP COMPLETE". Those steps conflict with a paper-only operator boundary:
+
+- Do not connect a wallet, store a seed, or broadcast.
+- Do not report setup complete while capital is unconfigured, the curve price source is unverified, and `scout pipeline` exits 5.
+- `pumpgrok terminal status` is the shared view of `var/ledger.sqlite`. It does not create the file. See `docs/runbooks/paper-terminal.md`.
+- `run --mode paper --once --replay` writes a replay sandbox ledger under `var/replay/`, not the desk ledger, and can stamp the code-default equity there. Do not treat that output as desk performance or as configured capital.
+- `ticket`, several `state` verbs, and `killswitch clear` can still write that code-default equity onto an empty `var/ledger.sqlite`. Do not run them during setup.

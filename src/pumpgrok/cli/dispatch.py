@@ -13,6 +13,7 @@ from pumpgrok.cli.errors import UsageError, _not_implemented, _say
 from pumpgrok.cli.parsing import build_parser
 from pumpgrok.cli.verbs_ops import _doctor_verb, _live_verb, _report_verb, _verify_verb
 from pumpgrok.cli.verbs_state import _killswitch, _paper, _run, _state, _ticket_verb
+from pumpgrok.cli.verbs_terminal import _terminal_verb
 from pumpgrok.cli.wiring import _find_only, _tools_entry, _verb_label
 from pumpgrok.config.settings import (
     ConfigError,
@@ -44,6 +45,7 @@ _VERB_HANDLERS: dict[str, Callable[[argparse.Namespace, Settings], int]] = {
     "verify": _verify_verb,
     "report": _report_verb,
     "backtest": _backtest_verb,
+    "terminal": _terminal_verb,
 }
 
 

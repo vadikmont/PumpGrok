@@ -11,8 +11,11 @@ autonomy, resume), `killswitch` (set, flatten, status, clear), `ticket`
 (`scout`, `risk`, `chief`, `rug`, `journal`, `report`, `audit`) and the
 human-only `live confirm`, which print the JSON envelope and exit 5 (B5
 partial until Phase 4). Replay maintenance verbs exit 5. `paper` and `state`
-halt/autonomy require `--seat` and refuse `sniper`/`exit`. Hidden
-`tools <id> --help` prints the tool JSON schema (B8).
+halt/autonomy require `--seat` and refuse `sniper`/`exit`. `paper buy|sell`,
+find-only verbs, and `tools <id> --help` check grants on a disposable ledger
+and do not create the canonical paper ledger. `terminal status` prints a
+read-only JSON snapshot; `terminal serve` binds 127.0.0.1 and cannot sign or
+place orders. Hidden `tools <id> --help` prints the tool JSON schema (B8).
 Exit codes: 0 ok; 1 config or usage; 2 ledger inconsistent; 3 live refused; 4 corrupt
 fixture; 5 not implemented; 6 a kill flatten that left a position open.
 argparse's own exit 2 is overridden so that 2 means only a ledger inconsistency.

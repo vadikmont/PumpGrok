@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import sys
+import tempfile
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
 from typing import Any
@@ -52,26 +53,22 @@ def _seat_manifest_id(seat: str) -> str:
     return seat
 
 
-async def _with_tools(
+async def _use_registry(
     verb: str,
     seat: str,
     settings: Settings,
     capabilities: Sequence[str],
     use: Callable[[list[Tool]], Awaitable[int]],
+    *,
+    data_dir: Path,
+    ledger_path: Path,
 ) -> int:
-    """Build the operator registry, resolve ``seat``, find every capability (I1).
-
-    Each find refusal prints the JSON envelope with the mapped exit before
-    anything runs. Otherwise ``use`` receives the resolved tools and decides:
-    call one (functional backends), fail on the approval gate (paper), or
-    return not-yet-implemented (Phase 4 orchestration). No tool implementation
-    is ever imported or called directly here; everything goes through find().
-    """
+    """Resolve ``seat`` through find (I1), then run ``use``. Closes the HTTP client."""
     reg, manifests, client = build_operator_registry(
-        data_dir=Path("var") / "desk",
+        data_dir=data_dir,
         repo_root=_repo_root(),
         settings=settings,
-        ledger_path=PAPER_LEDGER_PATH,
+        ledger_path=ledger_path,
         seed=settings.replay.seed,
     )
     try:
@@ -98,15 +95,61 @@ async def _with_tools(
         await client.aclose()
 
 
+async def _with_tools(
+    verb: str,
+    seat: str,
+    settings: Settings,
+    capabilities: Sequence[str],
+    use: Callable[[list[Tool]], Awaitable[int]],
+    *,
+    isolate: bool = False,
+) -> int:
+    """Build the operator registry, resolve ``seat``, find every capability (I1).
+
+    Each find refusal prints the JSON envelope with the mapped exit before
+    anything runs. Otherwise ``use`` receives the resolved tools and decides:
+    call one (functional backends), fail on the approval gate (paper), or
+    return not-yet-implemented (Phase 4 orchestration). No tool implementation
+    is ever imported or called directly here; everything goes through find().
+
+    ``isolate`` keeps the grant check off the canonical paper ledger. Refuse-only
+    and not-yet-implemented verbs use it so they do not create ``var/ledger.sqlite``
+    or stamp code-default equity onto the desk.
+    """
+    if isolate:
+        with tempfile.TemporaryDirectory(prefix="pumpgrok-isolated-") as tmp:
+            root = Path(tmp)
+            return await _use_registry(
+                verb,
+                seat,
+                settings,
+                capabilities,
+                use,
+                data_dir=root / "desk",
+                ledger_path=root / "ledger.sqlite",
+            )
+    return await _use_registry(
+        verb,
+        seat,
+        settings,
+        capabilities,
+        use,
+        data_dir=Path("var") / "desk",
+        ledger_path=PAPER_LEDGER_PATH,
+    )
+
+
 def _run_wired(
     verb: str,
     seat: str,
     settings: Settings,
     capabilities: Sequence[str],
     use: Callable[[list[Tool]], Awaitable[int]],
+    *,
+    isolate: bool = False,
 ) -> int:
     """Run one wired verb: registry build, find (I1), then the verb tail."""
-    return asyncio.run(_with_tools(verb, seat, settings, capabilities, use))
+    return asyncio.run(_with_tools(verb, seat, settings, capabilities, use, isolate=isolate))
 
 
 def _unflattened_lines(dumped: dict[str, Any]) -> list[str]:
@@ -188,7 +231,7 @@ def _find_only(verb: str, seat: str, settings: Settings, capabilities: Sequence[
     not-yet-implemented envelope because calling would need network backends
     or Phase 4 orchestration. No tool implementation is called.
     """
-    return _run_wired(verb, seat, settings, capabilities, _skip_use(verb))
+    return _run_wired(verb, seat, settings, capabilities, _skip_use(verb), isolate=True)
 
 
 def _tools_schema(tool_id: str) -> int:
@@ -196,11 +239,16 @@ def _tools_schema(tool_id: str) -> int:
 
     async def _schema() -> int:
         settings = load_settings()
+        with tempfile.TemporaryDirectory(prefix="pumpgrok-isolated-") as tmp:
+            root = Path(tmp)
+            return await _schema_in(settings, root)
+
+    async def _schema_in(settings: Settings, root: Path) -> int:
         reg, _, client = build_operator_registry(
-            data_dir=Path("var") / "desk",
+            data_dir=root / "desk",
             repo_root=_repo_root(),
             settings=settings,
-            ledger_path=PAPER_LEDGER_PATH,
+            ledger_path=root / "ledger.sqlite",
             seed=settings.replay.seed,
         )
         try:

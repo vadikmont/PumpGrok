@@ -34,6 +34,7 @@ EXPECTED_RUNBOOKS = (
     "rollback.md",
     "reading_reports.md",
     "go_live.md",
+    "paper-terminal.md",
 )
 
 KNOWN_PUMPGROK_VERBS = frozenset(
@@ -55,6 +56,7 @@ KNOWN_PUMPGROK_VERBS = frozenset(
         "journal",
         "audit",
         "tools",
+        "terminal",
     }
 )
 

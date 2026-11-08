@@ -469,3 +469,4 @@ class TestServedVerbCoverage:
             assert code == 5, argv
             assert json.loads(out)["status"] == "not-yet-implemented"
             assert "Traceback" not in err
+        assert not (tmp_path / "var" / "ledger.sqlite").exists()
