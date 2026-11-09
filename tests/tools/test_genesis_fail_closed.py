@@ -93,8 +93,8 @@ def test_present_genesis_on_existing_history_loads(tmp_path: Path) -> None:
         store.close()
 
 
-def test_new_empty_ledger_gets_genesis_from_budget(tmp_path: Path) -> None:
-    """Only a new, empty ledger has its genesis initialized from the budget."""
+def test_new_empty_ledger_does_not_get_code_default_genesis(tmp_path: Path) -> None:
+    """An empty ledger stays unconfigured. The code-default equity is not written."""
     ledger = tmp_path / "ledger.sqlite"
     store = LedgerStore(str(ledger))
     store.close()
@@ -103,22 +103,22 @@ def test_new_empty_ledger_gets_genesis_from_budget(tmp_path: Path) -> None:
 
     store = LedgerStore(str(ledger))
     try:
-        expected = str(load_settings().risk.paper_equity_lamports)
-        assert store.get_meta("initial_equity_lamports") == expected
+        assert store.get_meta("initial_equity_lamports") is None
+        assert store.count() == 0
     finally:
         store.close()
 
 
-def test_ensure_paper_genesis_is_written_first_then_noop(tmp_path: Path) -> None:
-    """An empty ledger gets genesis before any event; a later call changes nothing."""
+def test_ensure_paper_genesis_does_not_write_a_default(tmp_path: Path) -> None:
+    """Neither the default budget nor a different one stamps an empty ledger."""
     ledger = tmp_path / "ledger.sqlite"
     budget = RiskBudget()
     store = LedgerStore(str(ledger))
     try:
         ensure_paper_genesis(store, budget)
         assert store.count() == 0
-        assert store.get_meta("initial_equity_lamports") == str(budget.paper_equity_lamports)
+        assert store.get_meta("initial_equity_lamports") is None
         ensure_paper_genesis(store, RiskBudget(paper_equity_sol=Decimal("20")))
-        assert store.get_meta("initial_equity_lamports") == str(budget.paper_equity_lamports)
+        assert store.get_meta("initial_equity_lamports") is None
     finally:
         store.close()

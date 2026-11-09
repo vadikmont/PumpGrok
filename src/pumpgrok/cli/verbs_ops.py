@@ -37,7 +37,6 @@ from pumpgrok.reporting.daily import DailyReport
 from pumpgrok.reporting.render import render_daily, render_weekly
 from pumpgrok.reporting.weekly import WeeklyReport
 from pumpgrok.supervisor.scheduler import run_once_replay
-from pumpgrok.tools import ensure_paper_genesis
 
 log = logging.getLogger("pumpgrok.cli")
 
@@ -118,11 +117,10 @@ def _live_confirm(args: argparse.Namespace, settings: Settings) -> int:
     return EXIT_OK
 
 
-def _append_live_approval(by: str, cap_lamports: int, signature: str, settings: Settings) -> None:
-    """Append ApprovalRecorded(kind=live_gate) with the confirmation signature."""
+def _append_live_approval(by: str, cap_lamports: int, signature: str, _settings: Settings) -> None:
+    """Append ApprovalRecorded(kind=live_gate) without stamping code-default equity."""
     store = LedgerStore(PAPER_LEDGER_PATH)
     try:
-        ensure_paper_genesis(store, settings.risk)
         now = _utc_now().strftime("%Y-%m-%dT%H:%M:%SZ")
         store.append(
             ts_utc=now,

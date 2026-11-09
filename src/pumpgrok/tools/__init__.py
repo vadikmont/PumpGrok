@@ -281,17 +281,16 @@ class _CachingPriceSource:
 
 
 def ensure_paper_genesis(store: LedgerStore, budget: RiskBudget) -> None:
-    """Write the paper genesis equity on a new ledger; fail closed on history without it.
+    """Leave starting capital unconfigured. Never write the code-default equity.
 
-    The genesis meta row is ``initial_equity_lamports``. A ledger that already has
-    it is left alone. A ledger with events but no genesis raises CorruptState: the
-    configured budget may differ from the one the ledger started with, so
-    substituting it would silently change the base for balances and risk checks.
-    A new, empty ledger gets its genesis from the budget (INT-02): the same meta
-    row the replay runtime writes, so a fresh paper ledger reaches shutdown and
-    the exit-halt without a CorruptState. Never overwritten: history keeps the
-    genesis it started with.
+    ``initial_equity_lamports`` is written only by an explicit caller that already
+    holds a chosen amount. This function does not consult ``budget.paper_equity_sol``
+    and does not invent a 10 SOL genesis. A recorded row is left unchanged. A ledger
+    with events and no genesis raises CorruptState so a later budget cannot be
+    substituted for a missing base. An empty ledger stays empty.
     """
+    if not isinstance(budget, RiskBudget):
+        raise TypeError("budget must be a RiskBudget")
     if store.get_meta("initial_equity_lamports") is not None:
         return
     history = store.count()
@@ -300,7 +299,6 @@ def ensure_paper_genesis(store: LedgerStore, budget: RiskBudget) -> None:
             "paper ledger has events but no initial_equity_lamports genesis",
             events=history,
         )
-    store.set_meta("initial_equity_lamports", str(budget.paper_equity_lamports))
 
 
 def build_operator_registry(

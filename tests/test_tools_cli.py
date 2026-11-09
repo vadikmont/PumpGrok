@@ -128,6 +128,13 @@ class TestPaperRegistryPath:
         assert payload["code"] == "unavailable"
         assert "verified curve price source" in payload["message"]
         assert _ledger_kinds(tmp_path) == []
+        ledger = tmp_path / "var" / "ledger.sqlite"
+        if ledger.is_file():
+            store = LedgerStore(str(ledger))
+            try:
+                assert store.get_meta("initial_equity_lamports") is None
+            finally:
+                store.close()
 
     def test_paper_rejections_write_no_order_placed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

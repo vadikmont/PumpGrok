@@ -197,11 +197,10 @@ def _paper(args: argparse.Namespace, settings: Settings) -> int:
     return _run_wired(verb, args.seat, settings, ("exec.simulate", "exec.place"), use)
 
 
-def _set_autonomy(policy: str, by: str, settings: Settings) -> int:
+def _set_autonomy(policy: str, by: str, _settings: Settings) -> int:
     """Append the ``ConfigChanged`` + ``JournalNote`` pair for a level change."""
     store = LedgerStore(str(PAPER_LEDGER_PATH))
     try:
-        ensure_paper_genesis(store, settings.risk)
         previous = read_autonomy(store)
         ts_utc = format_ts_utc(WallClock().now())
         store.append_batch(
@@ -228,7 +227,6 @@ def _halt_clear(by: str, reason: str, settings: Settings) -> int:
     verb = "state halt --clear"
     store = LedgerStore(str(PAPER_LEDGER_PATH))
     try:
-        ensure_paper_genesis(store, settings.risk)
         clock = WallClock()
         engine = RiskEngine(
             store=store,
@@ -254,11 +252,10 @@ def _halt_clear(by: str, reason: str, settings: Settings) -> int:
     return EXIT_OK
 
 
-def _resume(target: str, by: str, settings: Settings) -> int:
+def _resume(target: str, by: str, _settings: Settings) -> int:
     """Record a seat resume from observe-only (paper-engine.md 6.4, R22)."""
     store = LedgerStore(str(PAPER_LEDGER_PATH))
     try:
-        ensure_paper_genesis(store, settings.risk)
         ts_utc = format_ts_utc(WallClock().now())
         store.append(
             ts_utc=ts_utc,
@@ -311,12 +308,11 @@ def _state(args: argparse.Namespace, settings: Settings) -> int:
     return _run_wired(verb, args.seat, settings, ("risk.halt_status",), _call_use(verb, 0, {}))
 
 
-def _killswitch_clear(by: str, reason: str, settings: Settings) -> int:
+def _killswitch_clear(by: str, reason: str, _settings: Settings) -> int:
     """Append ``KillSwitchCleared`` plus the ``killswitch_clear`` approval."""
     verb = "killswitch clear"
     store = LedgerStore(str(PAPER_LEDGER_PATH))
     try:
-        ensure_paper_genesis(store, settings.risk)
         clock = WallClock()
         switch = KillSwitch(
             clock,
@@ -373,12 +369,11 @@ def _killswitch(args: argparse.Namespace, settings: Settings) -> int:
     return _run_wired(verb, "risk", settings, ("risk.halt_status",), _call_use(verb, 0, {}))
 
 
-def _ticket_verb(args: argparse.Namespace, settings: Settings) -> int:
+def _ticket_verb(args: argparse.Namespace, _settings: Settings) -> int:
     """Allocate and list paper tickets over the canonical ledger (R29, R33)."""
     verb = f"ticket {args.cmd}"
     store = LedgerStore(str(PAPER_LEDGER_PATH))
     try:
-        ensure_paper_genesis(store, settings.risk)
         ts_utc = format_ts_utc(WallClock().now())
         if args.cmd == "next":
             ticket_id = allocate_ticket(
