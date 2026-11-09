@@ -1,11 +1,8 @@
-"""INT-02: the paper composition root records genesis equity at startup.
+"""Starting capital is not invented by the paper composition root.
 
-The replay composition root writes ``initial_equity_lamports`` when it opens
-its ledger; the paper (operator registry) root did not, so a fresh paper
-ledger failed closed: shutdown and the exit seat's protective halt raised
-``CorruptState`` instead of running. The paper composition now writes the
-same meta row from the configured budget at genesis, and never overwrites an
-existing genesis.
+An empty ledger stays without ``initial_equity_lamports``. Shutdown and the
+exit halt refuse a missing genesis instead of substituting the code-default
+equity. A genesis some caller recorded explicitly is never overwritten.
 """
 
 from __future__ import annotations
@@ -14,7 +11,10 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from pumpgrok.config.settings import load_settings
+from pumpgrok.core.errors import CorruptState
 from pumpgrok.ledger.store import LedgerStore
 from pumpgrok.replay.clock import FixtureClock
 from pumpgrok.replay.rng import make_rng
@@ -48,13 +48,13 @@ async def _compose(tmp_path: Path, name: str = "ledger.sqlite") -> Path:
     return ledger
 
 
-def test_paper_composition_records_genesis_equity(tmp_path: Path) -> None:
-    """The fresh paper ledger carries the configured budget as genesis equity."""
+def test_paper_composition_leaves_genesis_unconfigured(tmp_path: Path) -> None:
+    """A fresh paper ledger does not receive the code-default equity."""
     ledger = asyncio.run(_compose(tmp_path))
-    expected = str(load_settings().risk.paper_equity_lamports)
     store = LedgerStore(str(ledger))
     try:
-        assert store.get_meta("initial_equity_lamports") == expected
+        assert store.get_meta("initial_equity_lamports") is None
+        assert str(load_settings().risk.paper_equity_lamports) != ""
     finally:
         store.close()
 
@@ -85,8 +85,8 @@ def test_paper_composition_never_overwrites_genesis(tmp_path: Path) -> None:
         store.close()
 
 
-async def test_fresh_paper_ledger_reaches_shutdown(tmp_path: Path) -> None:
-    """Shutdown snapshots a fresh paper ledger instead of raising CorruptState."""
+async def test_fresh_paper_ledger_shutdown_refuses_missing_genesis(tmp_path: Path) -> None:
+    """Shutdown does not invent equity when genesis was never recorded."""
     ledger = await _compose(tmp_path)
     clock = FixtureClock(start=START)
     store = LedgerStore(str(ledger))
@@ -94,28 +94,29 @@ async def test_fresh_paper_ledger_reaches_shutdown(tmp_path: Path) -> None:
         supervisor = Supervisor(
             store=store, clock=clock, rng=make_rng(11), cycles=dict.fromkeys(ROSTER, _ok)
         )
-        code = await shutdown(
-            supervisor,
-            store=store,
-            health_path=str(tmp_path / "health.json"),
-            journal_dir=str(tmp_path / "journal"),
-            trades_path=str(tmp_path / "trades.jsonl"),
-        )
-        assert code == 0
+        with pytest.raises(CorruptState, match="initial_equity_lamports meta is missing"):
+            await shutdown(
+                supervisor,
+                store=store,
+                health_path=str(tmp_path / "health.json"),
+                journal_dir=str(tmp_path / "journal"),
+                trades_path=str(tmp_path / "trades.jsonl"),
+            )
+        assert store.get_meta("initial_equity_lamports") is None
     finally:
         store.close()
 
 
-async def test_fresh_paper_ledger_reaches_exit_halt(tmp_path: Path) -> None:
-    """The exit seat's protective halt lands instead of raising CorruptState."""
+async def test_fresh_paper_ledger_exit_halt_writes_nothing_without_genesis(tmp_path: Path) -> None:
+    """The exit halt is not stamped with a code-default equity."""
     ledger = await _compose(tmp_path)
     clock = FixtureClock(start=START)
     store = LedgerStore(str(ledger))
     try:
         task = SeatTask("bot-06-exit", 1.0, _ok, clock=clock, rng=make_rng(11), store=store)
-        task._append_exit_halt("test-correlation")
-        halts = store.read(types=["HaltSet"], limit=None)
-        assert len(halts) == 1
-        assert halts[0]["payload"]["reason"] == "manual"
+        with pytest.raises(CorruptState, match="initial_equity_lamports meta is missing"):
+            task._append_exit_halt("test-correlation")
+        assert store.read(types=["HaltSet"], limit=None) == []
+        assert store.get_meta("initial_equity_lamports") is None
     finally:
         store.close()

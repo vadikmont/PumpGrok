@@ -451,6 +451,11 @@ class TestServedVerbCoverage:
         assert "Traceback" not in err
 
         assert (tmp_path / "var" / "ledger.sqlite").is_file()
+        store = LedgerStore(str(tmp_path / "var" / "ledger.sqlite"))
+        try:
+            assert store.get_meta("initial_equity_lamports") is None
+        finally:
+            store.close()
 
     def test_verify_replay_path(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.chdir(tmp_path)
