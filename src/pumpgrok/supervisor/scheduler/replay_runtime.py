@@ -216,7 +216,8 @@ def open_replay_runtime(
     limits = limits if limits is not None else EngineLimits()
     store = LedgerStore(str(target))
     try:
-        store.set_meta("initial_equity_lamports", str(budget.paper_equity_lamports))
+        # Do not stamp code-default paper equity. Missing genesis stays missing.
+        # In-memory folds may still fall back to the budget; that is not a genesis write.
         curves = FixtureCurveSource(dataset, clock)
         risk = RiskEngine(
             store=store,
